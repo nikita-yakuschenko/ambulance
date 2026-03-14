@@ -40,30 +40,81 @@ _async_stop: Optional[object] = None
 _tray_icon: Optional[object] = None
 _config: dict = {}
 _exiting: bool = False
+_lock_file_path: Optional[Path] = None
 
 log = logging.getLogger("tg-ws-tray")
 
 
+def _same_process(lock_meta: dict, proc: psutil.Process) -> bool:
+    try:
+        lock_ct = float(lock_meta.get("create_time", 0.0))
+        proc_ct = float(proc.create_time())
+        if lock_ct > 0 and abs(lock_ct - proc_ct) > 1.0:
+            return False
+    except Exception:
+        return False
+
+    frozen = bool(getattr(sys, "frozen", False))
+    if frozen:
+        return os.path.basename(sys.executable) == proc.name()
+
+    return False
+
+
+def _release_lock():
+    global _lock_file_path
+    if not _lock_file_path:
+        return
+    try:
+        _lock_file_path.unlink(missing_ok=True)
+    except Exception:
+        pass
+    _lock_file_path = None
+
+
 def _acquire_lock() -> bool:
+    global _lock_file_path
     _ensure_dirs()
     lock_files = list(APP_DIR.glob("*.lock"))
-        
+
     for f in lock_files:
+        pid = None
+        meta: dict = {}
+
         try:
             pid = int(f.stem)
-            if psutil.pid_exists(pid):
-                try:
-                    psutil.Process(pid).status()
-                    return False
-                except (psutil.NoSuchProcess, psutil.ZombieProcess):
-                    pass
+        except Exception:
+            f.unlink(missing_ok=True)
+            continue
+
+        try:
+            raw = f.read_text(encoding="utf-8").strip()
+            if raw:
+                meta = json.loads(raw)
+        except Exception:
+            meta = {}
+
+        try:
+            proc = psutil.Process(pid)
+            if _same_process(meta, proc):
+                return False
         except Exception:
             pass
 
         f.unlink(missing_ok=True)
 
     lock_file = APP_DIR / f"{os.getpid()}.lock"
-    lock_file.touch()
+    try:
+        proc = psutil.Process(os.getpid())
+        payload = {
+            "create_time": proc.create_time(),
+        }
+        lock_file.write_text(json.dumps(payload, ensure_ascii=False),
+                             encoding="utf-8")
+    except Exception:
+        lock_file.touch()
+
+    _lock_file_path = lock_file
     return True
 
 
@@ -594,7 +645,10 @@ def main():
         _show_info("Приложение уже запущено.", os.path.basename(sys.argv[0]))
         return
 
-    run_tray()
+    try:
+        run_tray()
+    finally:
+        _release_lock()
 
 
 if __name__ == "__main__":
