@@ -64,6 +64,8 @@ _IP_TO_DC: Dict[str, Tuple[int, bool]] = {
     '149.154.171.5':  (5, False),
     '91.108.56.102': (5, True), '91.108.56.128': (5, True),
     '91.108.56.151': (5, True),
+    # DC203
+    '91.105.192.100': (203, False),
 }
 
 _dc_opt: Dict[int, Optional[str]] = {}
@@ -375,7 +377,7 @@ def _dc_from_init(data: bytes) -> Tuple[Optional[int], bool]:
                   proto, dc_raw, plain.hex())
         if proto in (0xEFEFEFEF, 0xEEEEEEEE, 0xDDDDDDDD):
             dc = abs(dc_raw)
-            if 1 <= dc <= 5:
+            if 1 <= dc <= 5 or dc == 203:
                 return dc, (dc_raw < 0)
     except Exception as exc:
         log.debug("DC extraction failed: %s", exc)
