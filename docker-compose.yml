@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  tg-ws-proxy:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "1080:1080"
+    volumes:
+      - tgwsdata:/data
+    command: >
+      python -u -m proxy.tg_ws_proxy
+      --host 0.0.0.0
+      --port 1080
+      --log-file /data/proxy.log
+      --dc-ip 2:149.154.167.220
+      --dc-ip 4:149.154.167.220
+
+volumes:
+  tgwsdata:
+
