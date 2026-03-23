@@ -5,7 +5,8 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "1080:1080"
+      # Dokploy/сервер публикует наружу порт 3000, поэтому пробрасываем его на контейнерный 1080.
+      - "3000:1080"
     volumes:
       - tgwsdata:/data
     command: >
