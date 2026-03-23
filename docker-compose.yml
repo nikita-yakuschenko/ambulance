@@ -14,6 +14,7 @@ services:
       --host 0.0.0.0
       --port 1080
       --log-file /data/proxy.log
+      --dc-ip 1:149.154.175.50
       --dc-ip 2:149.154.167.220
       --dc-ip 4:149.154.167.220
 
