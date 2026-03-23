@@ -4,9 +4,9 @@ services:
   tg-ws-proxy:
     build: .
     restart: unless-stopped
-    ports:
-      # Dokploy/сервер публикует наружу порт 3000, поэтому пробрасываем его на контейнерный 1080.
-      - "3000:1080"
+    # В Dokploy проброс `ports:` может игнорироваться (в `docker ps` нет HostPort->1080).
+    # Поэтому используем host networking: прокси слушает 1080 прямо на хосте.
+    network_mode: host
     volumes:
       - tgwsdata:/data
     command: >
